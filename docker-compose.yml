@@ -52,30 +52,31 @@ jobs:
           username: ${{ env.VPS_USERNAME }}
           key: ${{ env.SSH_PRIVATE_KEY }}
           script: |
-            # Pull latest images
-            docker pull ${{ env.DOCKER_USERNAME }}/nextjs-app:latest
-            docker pull ${{ env.DOCKER_USERNAME }}/nodejs-app:latest
+            cd ~
+            echo 'version: "3"
+            services:
+              frontend:
+                image: ${{ env.DOCKER_USERNAME }}/nextjs-app:latest
+                container_name: nextjs-container
+                ports:
+                  - "3000:3000"
+                networks:
+                  - app-network
+                restart: always
+
+              backend:
+                image: ${{ env.DOCKER_USERNAME }}/nodejs-app:latest
+                container_name: nodejs-container
+                ports:
+                  - "4005:4005"
+                networks:
+                  - app-network
+                restart: always
+
+            networks:
+              app-network:
+                driver: bridge' > docker-compose.yml
             
-            # Stop and remove existing containers
-            docker stop nextjs-container || true
-            docker stop nodejs-container || true
-            docker rm nextjs-container || true
-            docker rm nodejs-container || true
-            
-            # Run new containers
-            docker network create app-network || true
-            
-            docker run -d --name nodejs-container \
-              --network app-network \
-              -p 4005:4005 \
-              --restart always \
-              ${{ env.DOCKER_USERNAME }}/nodejs-app:latest
-              
-            docker run -d --name nextjs-container \
-              --network app-network \
-              -p 3000:3000 \
-              --restart always \
-              ${{ env.DOCKER_USERNAME }}/nextjs-app:latest
-            
-            # Cleanup unused images
+            docker-compose down || true
+            docker-compose up -d
             docker system prune -f
