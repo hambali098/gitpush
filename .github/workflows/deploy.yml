@@ -52,8 +52,10 @@ jobs:
           username: ${{ env.VPS_USERNAME }}
           key: ${{ env.SSH_PRIVATE_KEY }}
           script: |
+            # Buat folder aplikasi jika belum ada
             mkdir -p /var/www/test.hambalitubagus.com
             
+            # Konfigurasi Nginx
             sudo tee /etc/nginx/sites-available/test.hambalitubagus.com << 'EOF'
             server {
                 listen 80;
@@ -79,12 +81,11 @@ jobs:
             }
             EOF
             
+            # Aktifkan konfigurasi Nginx
             sudo ln -sf /etc/nginx/sites-available/test.hambalitubagus.com /etc/nginx/sites-enabled/
             sudo rm -f /etc/nginx/sites-enabled/default
             
-            docker pull ${{ env.DOCKER_USERNAME }}/nextjs-app:latest
-            docker pull ${{ env.DOCKER_USERNAME }}/nodejs-app:latest
-            
+            # Buat docker-compose.yml
             echo 'version: "3"
             services:
               frontend:
@@ -109,9 +110,20 @@ jobs:
               app-network:
                 driver: bridge' > /var/www/test.hambalitubagus.com/docker-compose.yml
             
+            # Navigasi ke folder aplikasi
             cd /var/www/test.hambalitubagus.com
+            
+            # Hentikan container yang berjalan
             docker-compose down || true
+            
+            # Pull image terbaru
+            docker-compose pull
+            
+            # Jalankan container
             docker-compose up -d
             
+            # Reload Nginx
             sudo nginx -t && sudo systemctl reload nginx
+            
+            # Bersihkan Docker
             docker system prune -f
